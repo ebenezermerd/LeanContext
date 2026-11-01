@@ -23,18 +23,18 @@ Status key: [x] done and verified, [ ] to do, [~] needs your hand.
 
 ## Phase 4: Command output compression (RTK)
 - [x] `brew install rtk` (1.1.0).
-- [~] Install the hooks yourself (Claude Code blocked me from installing a hook that rewrites its own commands):
-  ```
-  rtk init -g --hook-only --auto-patch
-  rtk init -g --codex --hook-only --auto-patch
-  ```
-  Undo with `rtk init -g --uninstall`. Check savings with `rtk gain`.
+- [x] Claude Code hook: `rtk init -g --hook-only --auto-patch` (PreToolUse on Bash, no RTK.md).
+- [x] Codex hook: `rtk init -g --codex` (it rejects `--hook-only`; adds `~/.codex/hooks.json` and a 547 B `RTK.md` include).
+- [x] The hook rewrites `git status` to `rtk git status`, which Claude Code no longer treats as read only, so every read prompted for permission. Fixed by allowing only read forms: `Bash(rtk git status|diff|log|show|branch:*)`, `rtk ls|read|grep|find|tree|gain|json|deps`. `rtk env` is left out on purpose because it can print secrets.
+- [x] Verified headless: search through searchq returned the right URL; `git status` and `git log` ran through RTK with no denials. Undo with `rtk init -g --uninstall` and `rtk init -g --codex --uninstall`; check savings with `rtk gain`.
+- [ ] Codex end to end is untested: the OpenRouter account returned 402 (out of credits).
 
 ## Phase 5: Standardized handoff
 - [x] `~/.claude/skills/handoff`: `/handoff` writes a 40-line `HANDOFF.md` in a fixed shape; start the next session from it instead of carrying a long context.
 
 ## Phase 6: Trim always-loaded context (needs your decisions, see STRATEGY.md)
-- [ ] Clean `~/.codex/AGENTS.md`: it is ~5.7 KB of stale claude-mem output from the Osteodata project, loaded into every Codex session.
+- [x] Cleaned `~/.codex/AGENTS.md` from 5.7 KB of stale claude-mem output to the 1.2 KB rules (backup kept locally).
+- Baseline: a one line headless `claude -p` prompt loads about 106K tokens of context (30K cache write, 76K cache read) before doing anything. That is the number to shrink.
 - [ ] Disable plugins you don't use in a given project (8 enabled, several bring MCP servers whose tool lists load every session).
 - [ ] Decide on claude-mem's SessionStart injection and superpowers' ~8.6 KB using-superpowers injection.
 
