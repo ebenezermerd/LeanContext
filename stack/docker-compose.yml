@@ -1,0 +1,30 @@
+# Local search backends. Bound to 127.0.0.1 only: never expose these publicly.
+services:
+  degoog:
+    image: ghcr.io/degoog-org/degoog:latest
+    container_name: degoog
+    ports: ["127.0.0.1:4444:4444"]
+    volumes: ["./data/degoog:/app/data"]
+    environment:
+      DEGOOG_SETTINGS_PASSWORDS: ${DEGOOG_SETTINGS_PASSWORD:-change-me-locally}
+    restart: unless-stopped
+
+  # The only thing agents talk to: shared queue + rate limiter in front of both engines.
+  searchq:
+    build: ../searchq
+    container_name: searchq
+    ports: ["127.0.0.1:8787:8787"]
+    environment:
+      DEGOOG_URL: http://degoog:4444
+      FOURGET_URL: http://fourget:80
+    depends_on: [degoog, fourget]
+    restart: unless-stopped
+
+  fourget:
+    image: luuul/4get:latest
+    container_name: fourget
+    ports: ["127.0.0.1:8088:80"]
+    environment:
+      FOURGET_SERVER_NAME: "4get local"
+      FOURGET_SERVER_ADMIN_EMAIL: "admin@localhost"
+    restart: unless-stopped
