@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# CLI client for the searchq gateway. Waits through queue_full instead of failing.
+# Usage: searchq "query" [max_results]
+set -uo pipefail
+URL=${SEARCHQ_URL:-http://127.0.0.1:8787}
+q=${1:?usage: searchq "query" [max]}; max=${2:-6}
+deadline=$(( $(date +%s) + ${SEARCHQ_MAX_WAIT_S:-240} ))
+body=$(jq -nc --arg q "$q" --argjson max "$max" '{q:$q,max:$max}')
+while :; do
+  out=$(curl -s -w '\n%{http_code}' -X POST "$URL/search" -H 'content-type: application/json' -d "$body" --max-time 240)
+  code=${out##*$'\n'}; json=${out%$'\n'*}
+  case $code in
+    200) jq -r '"\(.results|length) results via \(.backend)\(if .cached then " (cached)" else "" end)",
+               (.results|to_entries[]|"\(.key+1). \(.value.title)\n   \(.value.url)\n   \(.value.snippet)")' <<<"$json"; exit 0 ;;
+    503) sleep "$(jq -r '.retryAfterS // 5' <<<"$json")" ;;
+    000) sleep 3 ;;
+    *) echo "SEARCH_FAILED: $json" >&2; exit 1 ;;
+  esac
+  [ "$(date +%s)" -ge "$deadline" ] && { echo "SEARCH_TIMEOUT" >&2; exit 1; }
+done
